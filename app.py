@@ -48,10 +48,11 @@ def home():
     if request.method == 'POST':
         # Aquí capturamos lo que el usuario escribió en el cuadro de texto
         nombre = request.form.get('nombre_usuario')
-        saludo = f"¡Hola, {nombre}! 👋 Tu servidor te reconoce."
+        saludo = f"¡Hola, {nombre}! 👋 ponte a estudiar."
     
     return get_html(saludo)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
