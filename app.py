@@ -19,7 +19,41 @@ def get_db_connection():
         port=5432
     )
 
-# --- DISEÑO HTML ---
+# --- DISEÑO HTML: LOGIN ---
+LOGIN_HTML = """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Privado</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f0f2f5; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .card { border-radius: 20px; border: none; width: 100%; max-width: 380px; }
+    </style>
+</head>
+<body>
+    <div class="card shadow p-4">
+        <h3 class="text-center mb-4">🔐 Melate Pro</h3>
+        {% if error %}<div class="alert alert-danger p-2 small text-center">{{ error }}</div>{% endif %}
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Usuario</label>
+                <input type="text" name="user" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Contraseña</label>
+                <input type="password" name="pass" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Iniciar Sesión</button>
+        </form>
+    </div>
+</body>
+</html>
+"""
+
+# --- DISEÑO HTML: APLICACIÓN PRINCIPAL ---
 APP_HTML = """
 <!DOCTYPE html>
 <html lang="es">
@@ -46,12 +80,12 @@ APP_HTML = """
     </nav>
 
     <div class="container" style="max-width: 650px;">
-        <div class="card p-4 mb-4 text-center">
+        <div class="card p-4 mb-4 text-center shadow">
             <form method="POST">
                 <button type="submit" name="accion" value="generar" class="btn btn-primary w-100 py-2">Generar Sorteo del Día</button>
             </form>
             {% if eq %}
-            <div class="bg-light p-3 rounded mt-3 shadow-sm text-start">
+            <div class="bg-light p-3 rounded mt-3 shadow-sm text-start border">
                 <div class="mb-2"><strong>Eq:</strong> {% for n in eq %}<div class="ball">{{ "%02d"|format(n) }}</div>{% endfor %}</div>
                 <div><strong>Cz:</strong> {% for n in cz %}<div class="ball" style="background:#a29bfe;">{{ "%02d"|format(n) }}</div>{% endfor %}</div>
                 <form method="POST" class="mt-3">
@@ -63,7 +97,7 @@ APP_HTML = """
             {% endif %}
         </div>
 
-        <div class="card p-4">
+        <div class="card p-4 shadow">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="m-0"><i class="bi bi-clock-history"></i> Historial de Jugadas</h5>
                 <form action="/limpiar" method="POST" onsubmit="return confirm('¿Borrar todo el historial?')">
@@ -78,7 +112,7 @@ APP_HTML = """
                     <form method="POST" action="/marcar_ganador">
                         <input type="hidden" name="id" value="{{ f.id }}">
                         <button type="submit" class="btn btn-sm {% if f.ganador %}btn-success{% else %}btn-outline-secondary{% endif %}">
-                            <i class="bi bi-trophy"></i>
+                            <i class="bi bi-trophy-fill"></i>
                         </button>
                     </form>
                 </div>
@@ -89,26 +123,23 @@ APP_HTML = """
                 </div>
             </div>
             {% endfor %}
+            {% if not favs %}
+                <p class="text-muted text-center py-4">No hay jugadas guardadas.</p>
+            {% endif %}
         </div>
     </div>
 </body>
 </html>
 """
 
-# LOGIN_HTML omitido por brevedad (usa el mismo que tenías)
-# [Aquí pega el LOGIN_HTML del paso anterior]
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # ... (mismo código de login que tenías) ...
-    # Asegúrate de incluir el código de login que ya te funcionaba
     error = None
     if request.method == 'POST':
         if request.form['user'] == ADMIN_USER and request.form['pass'] == ADMIN_PASS:
             session['logged_in'] = True
             return redirect(url_for('home'))
         error = 'Credenciales inválidas'
-    # Define LOGIN_HTML aquí o arriba
     return render_template_string(LOGIN_HTML, error=error)
 
 @app.route('/logout')
@@ -118,7 +149,9 @@ def logout():
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    if not session.get('logged_in'): return redirect(url_for('login'))
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
     eq, cz = None, None
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -145,7 +178,6 @@ def marcar_ganador():
     id_fav = request.form.get('id')
     conn = get_db_connection()
     cur = conn.cursor()
-    # Alternar entre ganador y no ganador
     cur.execute('UPDATE favoritos SET ganador = NOT ganador WHERE id = %s', (id_fav,))
     conn.commit()
     cur.close()
@@ -164,5 +196,4 @@ def limpiar():
     return redirect(url_for('home'))
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
