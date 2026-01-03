@@ -20,11 +20,11 @@ def get_db_connection():
         port=5432
     )
 
-# --- COMPONENTE: NAVBAR ---
-def get_navbar():
+# --- FUNCIÓN PARA GENERAR LA NAVBAR DINÁMICAMENTE ---
+def render_navbar():
     admin_link = ""
     if session.get('es_admin'):
-        admin_link = '<li class="nav-item"><a class="nav-link text-warning" href="/usuarios">⚙️ Gestionar Usuarios</a></li>'
+        admin_link = '<li class="nav-item"><a class="nav-link text-warning" href="/usuarios">⚙️ Usuarios</a></li>'
     
     return f"""
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow">
@@ -37,127 +37,140 @@ def get_navbar():
                     <li class="nav-item"><a class="nav-link" href="/analitica">Analítica</a></li>
                     {admin_link}
                 </ul>
-                <span class="navbar-text me-3 small">Hola, <b>{session.get('user')}</b></span>
+                <span class="navbar-text me-3 small text-info">👤 {session.get('user', '')}</span>
                 <a href="/logout" class="btn btn-outline-danger btn-sm">Salir</a>
             </div>
         </div>
     </nav>
     """
 
-# --- PLANTILLAS NUEVAS ---
+# --- PLANTILLAS BASE (Sin la Navbar pegada al inicio) ---
 
-USUARIOS_HTML = """
+LOGIN_HTML = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Usuarios</title>
+    <title>Acceso</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-    """ + get_navbar() + """
-    <div class="container" style="max-width: 800px;">
-        <div class="card p-4 shadow mb-4">
-            <h5>➕ Agregar Nuevo Usuario</h5>
-            <form method="POST" action="/usuarios/crear" class="row g-2">
-                <div class="col-md-4"><input type="text" name="new_user" class="form-control" placeholder="Usuario" required></div>
-                <div class="col-md-4"><input type="password" name="new_pass" class="form-control" placeholder="Contraseña" required></div>
-                <div class="col-md-4"><button type="submit" class="btn btn-primary w-100">Crear Acceso</button></div>
-            </form>
-        </div>
-
-        <div class="card p-4 shadow">
-            <h5>👥 Usuarios en el Sistema</h5>
-            <table class="table align-middle">
-                <thead><tr><th>Usuario</th><th>Rango</th><th>Acción</th></tr></thead>
-                <tbody>
-                    {% for u in users %}
-                    <tr>
-                        <td>{{ u.username }}</td>
-                        <td>{% if u.es_admin %}<span class="badge bg-danger">Admin</span>{% else %}<span class="badge bg-secondary">Usuario</span>{% endif %}</td>
-                        <td>
-                            {% if u.username != session['user'] %}
-                            <form method="POST" action="/usuarios/borrar">
-                                <input type="hidden" name="user_id" value="{{ u.id }}">
-                                <button class="btn btn-sm btn-outline-danger">Eliminar</button>
-                            </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+<body class="bg-light d-flex align-items-center" style="height: 100vh;">
+    <div class="card shadow p-4 mx-auto" style="max-width: 350px; width: 100%;">
+        <h3 class="text-center mb-4">🔐 Melate Login</h3>
+        {% if error %}<div class="alert alert-danger p-2 small text-center">{{ error }}</div>{% endif %}
+        <form method="POST">
+            <div class="mb-3"><label class="form-label">Usuario</label><input type="text" name="user" class="form-control" required></div>
+            <div class="mb-3"><label class="form-label">Contraseña</label><input type="password" name="pass" class="form-control" required></div>
+            <button type="submit" class="btn btn-primary w-100">Entrar</button>
+        </form>
     </div>
 </body>
 </html>
 """
 
-# [Mantener LOGIN_HTML, GEN_HTML, etc. del paso anterior, solo agregando get_navbar()]
+LAYOUT_HTML = """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Melate Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>.ball { display: inline-block; width: 30px; height: 30px; line-height: 30px; background: #ffcc00; border-radius: 50%; text-align: center; font-weight: bold; margin: 2px; border: 1px solid #d4ac0d; font-size: 0.75rem; }</style>
+</head>
+<body class="bg-light">
+    {{ navbar | safe }}
+    <div class="container">
+        {{ content | safe }}
+    </div>
+</body>
+</html>
+"""
 
-# --- RUTAS DE SEGURIDAD Y USUARIOS ---
+# --- RUTAS ---
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        user = request.form['user']
-        pw = request.form['pass']
-        
+        user, pw = request.form['user'], request.form['pass']
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("SELECT * FROM usuarios WHERE username = %s AND password = %s", (user, pw))
-        account = cur.fetchone()
+        acc = cur.fetchone()
         cur.close(); conn.close()
-        
-        if account:
-            session['logged_in'] = True
-            session['user'] = account['username']
-            session['es_admin'] = account['es_admin']
+        if acc:
+            session.update({'logged_in': True, 'user': acc['username'], 'es_admin': acc['es_admin']})
             return redirect(url_for('home'))
-        return render_template_string(LOGIN_HTML, error="Usuario o clave incorrectos")
+        return render_template_string(LOGIN_HTML, error="Error de acceso")
     return render_template_string(LOGIN_HTML)
 
+@app.route('/')
+def home():
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    content = """
+    <div class="card p-4 shadow text-center mx-auto" style="max-width: 500px;">
+        <h3>🎰 Generar Jugada</h3>
+        <form method="POST" action="/generar"><button class="btn btn-primary w-100 mb-3">Generar</button></form>
+    </div>
+    """
+    return render_template_string(LAYOUT_HTML, navbar=render_navbar(), content=content)
+
+@app.route('/generar', methods=['POST'])
+def generar():
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    eq = sorted(random.sample(range(1, 57), 6))
+    cz = sorted(random.sample(range(1, 57), 6))
+    content = f"""
+    <div class="card p-4 shadow mx-auto" style="max-width: 500px;">
+        <div class="mb-2"><b>Eq:</b> {" ".join([f'<div class="ball">{n:02d}</div>' for n in eq])}</div>
+        <div class="mb-3"><b>Cz:</b> {" ".join([f'<div class="ball" style="background:#a29bfe;">{n:02d}</div>' for n in cz])}</div>
+        <form method="POST" action="/guardar">
+            <input type="hidden" name="num_eq" value="{','.join(map(str, eq))}">
+            <input type="hidden" name="num_cz" value="{','.join(map(str, cz))}">
+            <button class="btn btn-success w-100">Guardar</button>
+        </form>
+    </div>
+    """
+    return render_template_string(LAYOUT_HTML, navbar=render_navbar(), content=content)
+
 @app.route('/usuarios')
-def gestionar_usuarios():
+def usuarios():
     if not session.get('es_admin'): return redirect(url_for('home'))
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT * FROM usuarios ORDER BY es_admin DESC")
-    users = cur.fetchall()
-    cur.close(); conn.close()
-    return render_template_string(USUARIOS_HTML, users=users)
+    users = cur.fetchall(); cur.close(); conn.close()
+    
+    rows = "".join([f"<tr><td>{u['username']}</td><td>{'Admin' if u['es_admin'] else 'User'}</td></tr>" for u in users])
+    content = f"""
+    <div class="card p-4 shadow">
+        <h5>👥 Gestión de Usuarios</h5>
+        <table class="table"><thead><tr><th>User</th><th>Rango</th></tr></thead><tbody>{rows}</tbody></table>
+    </div>
+    """
+    return render_template_string(LAYOUT_HTML, navbar=render_navbar(), content=content)
 
-@app.route('/usuarios/crear', methods=['POST'])
-def crear_usuario():
-    if not session.get('es_admin'): return redirect(url_for('home'))
-    new_user = request.form['new_user']
-    new_pass = request.form['new_pass']
-    conn = get_db_connection()
-    cur = conn.cursor()
-    try:
-        cur.execute("INSERT INTO usuarios (username, password) VALUES (%s, %s)", (new_user, new_pass))
-        conn.commit()
-    except: pass
-    cur.close(); conn.close()
-    return redirect(url_for('gestionar_usuarios'))
-
-@app.route('/usuarios/borrar', methods=['POST'])
-def borrar_usuario():
-    if not session.get('es_admin'): return redirect(url_for('home'))
-    user_id = request.form['user_id']
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM usuarios WHERE id = %s AND es_admin = FALSE", (user_id,))
-    conn.commit()
-    cur.close(); conn.close()
-    return redirect(url_for('gestionar_usuarios'))
-
-# ... (Rutas de /home, /generar, /resultados, /analitica se mantienen igual) ...
+@app.route('/resultados')
+def resultados():
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM favoritos ORDER BY fecha DESC LIMIT 20")
+    favs = cur.fetchall(); cur.close(); conn.close()
+    
+    rows = "".join([f"<tr><td>{f['fecha'].strftime('%H:%M')}</td><td>{f['serie_eq']}</td></tr>" for f in favs])
+    content = f"<div class='card p-4 shadow'><h5>📋 Historial</h5><table class='table'>{rows}</table></div>"
+    return render_template_string(LAYOUT_HTML, navbar=render_navbar(), content=content)
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+@app.route('/guardar', methods=['POST'])
+def guardar():
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    conn = get_db_connection(); cur = conn.cursor()
+    cur.execute('INSERT INTO favoritos (serie_eq, serie_cz) VALUES (%s, %s)', (request.form.get('num_eq'), request.form.get('num_cz')))
+    conn.commit(); cur.close(); conn.close()
+    return redirect(url_for('resultados'))
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
