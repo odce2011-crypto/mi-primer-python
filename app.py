@@ -6,6 +6,7 @@ from psycopg2.extras import RealDictCursor
 from datetime import datetime
 import pandas as pd
 import io
+from collections import Counter
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'clave-secreta-provisional-123')
@@ -22,7 +23,6 @@ def get_db_connection():
         port=5432
     )
 
-# --- COMPONENTE: NAVBAR ---
 def get_navbar():
     return """
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow">
@@ -32,7 +32,8 @@ def get_navbar():
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="/">Generador</a></li>
                     <li class="nav-item"><a class="nav-link" href="/resultados">Historial</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/estadisticas">Estadísticas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/analitica">Analítica</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/estadisticas">Status</a></li>
                 </ul>
                 <a href="/logout" class="btn btn-outline-danger btn-sm">Salir</a>
             </div>
@@ -78,6 +79,7 @@ GEN_HTML = """
     <div class="container" style="max-width: 600px;">
         <div class="card p-4 shadow mb-4 text-center">
             <h3>🎰 Generar Jugada</h3>
+            <p class="text-muted small">Basado en Equilibrio y Cazadora</p>
             <form method="POST" action="/generar">
                 <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">Generar Números</button>
             </form>
@@ -113,22 +115,12 @@ RESULTADOS_HTML = """
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4>📋 Historial de Series</h4>
             <a href="/descargar" class="btn btn-success btn-sm">
-                <i class="bi bi-file-earmark-excel"></i> Descargar Excel (.xlsx)
+                <i class="bi bi-file-earmark-excel"></i> Descargar Excel
             </a>
         </div>
-
-        <div class="card p-4 shadow mb-4">
-            <form method="GET" action="/resultados" class="row g-3">
-                <div class="col-8"><input type="date" name="fecha_busqueda" class="form-control" value="{{ fecha_filtro }}"></div>
-                <div class="col-4"><button type="submit" class="btn btn-dark w-100">Filtrar</button></div>
-            </form>
-        </div>
-
-        <div class="card p-4 shadow">
-            <table class="table table-hover text-center">
-                <thead class="table-light">
-                    <tr><th>Fecha</th><th>Equilibrio</th><th>Cazadora</th></tr>
-                </thead>
+        <div class="card p-4 shadow mb-4 text-center">
+            <table class="table table-hover">
+                <thead class="table-light"><tr><th>Fecha</th><th>Equilibrio</th><th>Cazadora</th></tr></thead>
                 <tbody>
                     {% for f in favs %}
                     <tr>
@@ -145,12 +137,52 @@ RESULTADOS_HTML = """
 </html>
 """
 
+ANALITICA_HTML = """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analítica - Melate Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    """ + get_navbar() + """
+    <div class="container">
+        <h4 class="mb-4 text-center">🔥 Análisis de Números Frecuentes</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card p-4 shadow mb-4">
+                    <h5 class="text-danger">Más Frecuentes (Calientes)</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for num, count in hot %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Número <strong>{{ "%02d"|format(num|int) }}</strong>
+                            <span class="badge bg-danger rounded-pill">{{ count }} veces</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-4 shadow mb-4 text-center">
+                    <h5>Resumen General</h5>
+                    <p>Has analizado <strong>{{ total_series }}</strong> series guardadas.</p>
+                    <hr>
+                    <p class="small text-muted">Este análisis combina tanto las series de 'Equilibrio' como las 'Cazadoras' para detectar tus tendencias de generación.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
 STATS_HTML = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estadísticas - Melate Pro</title>
+    <title>Status - Melate Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
@@ -207,26 +239,34 @@ def guardar():
 @app.route('/resultados')
 def resultados():
     if not session.get('logged_in'): return redirect(url_for('login'))
-    fecha_filtro = request.args.get('fecha_busqueda')
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    if fecha_filtro:
-        cur.execute("SELECT * FROM favoritos WHERE DATE(fecha) = %s ORDER BY fecha DESC", (fecha_filtro,))
-    else:
-        cur.execute('SELECT * FROM favoritos ORDER BY fecha DESC')
+    cur.execute('SELECT * FROM favoritos ORDER BY fecha DESC')
     favs = cur.fetchall()
     cur.close(); conn.close()
-    return render_template_string(RESULTADOS_HTML, favs=favs, fecha_filtro=fecha_filtro)
+    return render_template_string(RESULTADOS_HTML, favs=favs)
 
-@app.route('/estadisticas')
-def estadisticas():
+@app.route('/analitica')
+def analitica():
     if not session.get('logged_in'): return redirect(url_for('login'))
     conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT COUNT(*) FROM favoritos')
-    total = cur.fetchone()[0]
-    cur.close(); conn.close()
-    return render_template_string(STATS_HTML, total=total)
+    # Traemos todas las series
+    df = pd.read_sql_query('SELECT serie_eq, serie_cz FROM favoritos', conn)
+    conn.close()
+    
+    total_series = len(df)
+    todos_los_numeros = []
+    
+    # Procesamos las columnas para extraer cada número individual
+    for _, row in df.iterrows():
+        todos_los_numeros.extend(row['serie_eq'].split(','))
+        todos_los_numeros.extend(row['serie_cz'].split(','))
+    
+    # Contamos frecuencias
+    conteo = Counter(todos_los_numeros)
+    hot_numbers = conteo.most_common(10) # Los 10 más repetidos
+    
+    return render_template_string(ANALITICA_HTML, hot=hot_numbers, total_series=total_series)
 
 @app.route('/descargar')
 def descargar():
@@ -238,12 +278,17 @@ def descargar():
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Mis Jugadas')
     output.seek(0)
-    return send_file(
-        output, 
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True, 
-        download_name=f"Melate_Historial_{datetime.now().strftime('%Y%m%d')}.xlsx"
-    )
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name="Historial_Melate.xlsx")
+
+@app.route('/estadisticas')
+def estadisticas():
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT COUNT(*) FROM favoritos')
+    total = cur.fetchone()[0]
+    cur.close(); conn.close()
+    return render_template_string(STATS_HTML, total=total)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
