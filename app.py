@@ -22,13 +22,13 @@ html_template = """
 <body>
     <div class="container text-center">
         <div class="card p-5 mx-auto" style="max-width: 500px;">
-            <h1 class="text-primary mb-4">🚀 ¡Logro Desbloqueado!</h1>
-            <p class="lead mb-4">Tu aplicación de Python ya no es solo texto plano. Ahora tiene diseño profesional corriendo en tu <strong>VPS de Hostinger</strong>.</p>
+            <h1 class="text-primary mb-4">🚀 ¡Hola Oscarito!</h1>
+            <p class="lead mb-4"> <strong>yo se que algo de tir</strong>.</p>
             <hr>
-            <p class="text-muted">¿Qué quieres construir ahora?</p>
+            <p class="text-muted">¿oprime el boton?</p>
             <div class="d-grid gap-2">
-                <a href="#" class="btn btn-custom">Explorar mi servidor</a>
-                <button class="btn btn-outline-secondary" onclick="alert('¡El servidor responde perfectamente!')">Probar Botón</button>
+                <a href="#" class="btn btn-custom"> Este no  </a>
+                <button class="btn btn-outline-secondary" onclick="alert('¡quieres hacer una serie!')">Este boton es el bueno</button>
             </div>
         </div>
     </div>
@@ -43,3 +43,4 @@ def hello():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
