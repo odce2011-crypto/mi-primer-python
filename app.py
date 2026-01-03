@@ -20,7 +20,7 @@ def get_db_connection():
         port=5432
     )
 
-# --- COMPONENTE: MENÚ DE NAVEGACIÓN ---
+# --- COMPONENTE: NAVBAR ---
 def get_navbar():
     return """
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow">
@@ -43,18 +43,17 @@ def get_navbar():
     </nav>
     """
 
-# --- DISEÑO HTML: LOGIN ---
+# --- LOGIN_HTML ---
 LOGIN_HTML = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso Privado</title>
+    <title>Acceso</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>body { background: #f0f2f5; height: 100vh; display: flex; align-items: center; justify-content: center; }</style>
 </head>
-<body>
-    <div class="card shadow p-4" style="max-width: 350px; width: 100%;">
+<body class="bg-light d-flex align-items-center" style="height: 100vh;">
+    <div class="card shadow p-4 mx-auto" style="max-width: 350px; width: 100%;">
         <h3 class="text-center mb-4">🔐 Melate Login</h3>
         {% if error %}<div class="alert alert-danger p-2 small text-center">{{ error }}</div>{% endif %}
         <form method="POST">
@@ -76,25 +75,24 @@ GEN_HTML = """
     <title>Generador - Melate Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <style>.ball { display: inline-block; width: 35px; height: 35px; line-height: 35px; background: #ffcc00; border-radius: 50%; text-align: center; font-weight: bold; margin: 2px; border: 1px solid #d4ac0d; }</style>
+    <style>.ball { display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #ffcc00; border-radius: 50%; text-align: center; font-weight: bold; margin: 2px; border: 1px solid #d4ac0d; font-size: 0.8rem; }</style>
 </head>
 <body class="bg-light">
     """ + get_navbar() + """
     <div class="container" style="max-width: 600px;">
         <div class="card p-4 shadow mb-4 text-center">
-            <h3>🎰 Generador de Series</h3>
-            <p class="text-muted">Basado en Equilibrio y Cazadora</p>
+            <h3>🎰 Generar Jugada</h3>
             <form method="POST" action="/generar">
-                <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">¡Generar Números!</button>
+                <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">Generar Números</button>
             </form>
             {% if eq %}
-            <div class="bg-white p-3 rounded border text-start">
-                <div class="mb-2"><strong>Eq:</strong> {% for n in eq %}<div class="ball">{{ "%02d"|format(n) }}</div>{% endfor %}</div>
-                <div class="mb-3"><strong>Cz:</strong> {% for n in cz %}<div class="ball" style="background:#a29bfe;">{{ "%02d"|format(n) }}</div>{% endfor %}</div>
+            <div class="bg-white p-3 rounded border text-start shadow-sm">
+                <div class="mb-2"><strong>Equilibrio:</strong> {% for n in eq %}<div class="ball">{{ "%02d"|format(n) }}</div>{% endfor %}</div>
+                <div class="mb-3"><strong>Cazadora:</strong> {% for n in cz %}<div class="ball" style="background:#a29bfe;">{{ "%02d"|format(n) }}</div>{% endfor %}</div>
                 <form method="POST" action="/guardar">
                     <input type="hidden" name="num_eq" value="{{ eq|join(',') }}">
                     <input type="hidden" name="num_cz" value="{{ cz|join(',') }}">
-                    <button type="submit" class="btn btn-success w-100">Guardar esta jugada</button>
+                    <button type="submit" class="btn btn-success w-100">⭐ Guardar en mi Historial</button>
                 </form>
             </div>
             {% endif %}
@@ -104,7 +102,7 @@ GEN_HTML = """
 </html>
 """
 
-# --- PÁGINA 2: HISTORIAL Y RESULTADOS ---
+# --- PÁGINA 2: RESULTADOS CON FILTRO ---
 RESULTADOS_HTML = """
 <!DOCTYPE html>
 <html lang="es">
@@ -116,33 +114,48 @@ RESULTADOS_HTML = """
 <body class="bg-light">
     """ + get_navbar() + """
     <div class="container">
+        <div class="card p-4 shadow mb-4">
+            <h4 class="mb-3">🔍 Filtrar por Fecha</h4>
+            <form method="GET" action="/resultados" class="row g-3">
+                <div class="col-8">
+                    <input type="date" name="fecha_busqueda" class="form-control" value="{{ fecha_filtro }}">
+                </div>
+                <div class="col-4">
+                    <button type="submit" class="btn btn-dark w-100">Buscar</button>
+                </div>
+            </form>
+            {% if fecha_filtro %}
+                <div class="mt-2 small text-muted">
+                    Mostrando resultados para: <strong>{{ fecha_filtro }}</strong> 
+                    <a href="/resultados" class="text-danger ms-2">Limpiar filtro</a>
+                </div>
+            {% endif %}
+        </div>
+
         <div class="card p-4 shadow">
-            <h4 class="mb-4">📋 Historial de Series Guardadas</h4>
+            <h4 class="mb-4">📋 Series Registradas</h4>
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead class="table-dark">
                         <tr>
-                            <th>Fecha</th>
-                            <th>Serie Equilibrio</th>
-                            <th>Serie Cazadora</th>
-                            <th>Acciones</th>
+                            <th>Hora</th>
+                            <th>Eq (Amarillo)</th>
+                            <th>Cz (Morado)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for f in favs %}
                         <tr>
-                            <td>{{ f.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
-                            <td>{{ f.serie_eq.replace(',', ' - ') }}</td>
-                            <td>{{ f.serie_cz.replace(',', ' - ') }}</td>
-                            <td>
-                                <form action="/limpiar" method="POST" style="display:inline;">
-                                    <button class="btn btn-sm btn-outline-danger">Eliminar</button>
-                                </form>
-                            </td>
+                            <td>{{ f.fecha.strftime('%H:%M:%S') }} <br><small class="text-muted">{{ f.fecha.strftime('%d/%m/%y') }}</small></td>
+                            <td><span class="badge bg-warning text-dark">{{ f.serie_eq.replace(',', ' - ') }}</span></td>
+                            <td><span class="badge bg-secondary" style="background-color:#a29bfe !important;">{{ f.serie_cz.replace(',', ' - ') }}</span></td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                {% if not favs %}
+                    <p class="text-center text-muted my-4">No se encontraron jugadas en esta fecha.</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -162,22 +175,16 @@ STATS_HTML = """
 <body class="bg-light">
     """ + get_navbar() + """
     <div class="container text-center">
-        <div class="row">
-            <div class="col-md-6 offset-md-3">
-                <div class="card p-5 shadow">
-                    <h1 class="display-4 text-primary">{{ total }}</h1>
-                    <p class="lead">Series Guardadas en PostgreSQL</p>
-                    <hr>
-                    <p class="text-muted">Tu base de datos está conectada y funcionando.</p>
-                </div>
-            </div>
+        <div class="card p-5 shadow mx-auto" style="max-width: 500px;">
+            <h1 class="display-1 text-primary">{{ total }}</h1>
+            <p class="lead">Series totales en PostgreSQL</p>
         </div>
     </div>
 </body>
 </html>
 """
 
-# --- RUTAS DE LA APP ---
+# --- RUTAS ---
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -186,7 +193,7 @@ def login():
         if request.form['user'] == ADMIN_USER and request.form['pass'] == ADMIN_PASS:
             session['logged_in'] = True
             return redirect(url_for('home'))
-        error = 'Credenciales inválidas'
+        error = 'Acceso denegado'
     return render_template_string(LOGIN_HTML, error=error)
 
 @app.route('/logout')
@@ -220,12 +227,20 @@ def guardar():
 @app.route('/resultados')
 def resultados():
     if not session.get('logged_in'): return redirect(url_for('login'))
+    fecha_filtro = request.args.get('fecha_busqueda')
+    
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute('SELECT * FROM favoritos ORDER BY fecha DESC')
+    
+    if fecha_filtro:
+        # Filtramos jugadas que coincidan con la fecha seleccionada (año-mes-día)
+        cur.execute("SELECT * FROM favoritos WHERE DATE(fecha) = %s ORDER BY fecha DESC", (fecha_filtro,))
+    else:
+        cur.execute('SELECT * FROM favoritos ORDER BY fecha DESC LIMIT 50')
+        
     favs = cur.fetchall()
     cur.close() ; conn.close()
-    return render_template_string(RESULTADOS_HTML, favs=favs)
+    return render_template_string(RESULTADOS_HTML, favs=favs, fecha_filtro=fecha_filtro)
 
 @app.route('/estadisticas')
 def estadisticas():
@@ -236,16 +251,6 @@ def estadisticas():
     total = cur.fetchone()[0]
     cur.close() ; conn.close()
     return render_template_string(STATS_HTML, total=total)
-
-@app.route('/limpiar', methods=['POST'])
-def limpiar():
-    # Aquí podrías poner lógica para borrar solo uno, pero por ahora limpia todo
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM favoritos')
-    conn.commit()
-    cur.close() ; conn.close()
-    return redirect(url_for('resultados'))
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
