@@ -29,11 +29,30 @@ def home():
     content = '<div class="card p-5 text-center shadow"><h2>🎰 Bienvenido</h2><form method="POST" action="/generar"><button class="btn btn-primary btn-lg w-100">Generar</button></form></div>'
     return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
 
+# --- app.py (en la ruta /generar) ---
 @app.route('/generar', methods=['POST'])
 def generar():
     eq, cz = generar_melate()
-    balls = "".join([f'<div class="ball">{n:02d}</div>' for n in eq])
-    content = f'<div class="card p-4 shadow"><h4>Series</h4>{balls}<form method="POST" action="/guardar"><input type="hidden" name="num_eq" value="{",".join(map(str,eq))}"><input type="hidden" name="num_cz" value="{",".join(map(str,cz))}"><button class="btn btn-success w-100">Guardar</button></form></div>'
+    # Creamos las filas de bolitas
+    balls_eq = "".join([f'<div class="ball">{n:02d}</div>' for n in eq])
+    balls_cz = "".join([f'<div class="ball" style="background:#a29bfe; border-color:#6c5ce7;">{n:02d}</div>' for n in cz])
+    
+    content = f'''
+    <div class="card p-4 shadow-sm mx-auto" style="max-width: 550px;">
+        <h4 class="mb-4">Series Generadas</h4>
+        <div class="mb-4 text-center">
+            <h6 class="text-muted small text-start">Sorteo Equilibrio:</h6>
+            <div class="d-block">{balls_eq}</div> </div>
+        <div class="mb-4 text-center">
+            <h6 class="text-muted small text-start">Sorteo Cazadora:</h6>
+            <div class="d-block">{balls_cz}</div> </div>
+        <form method="POST" action="/guardar">
+            <input type="hidden" name="num_eq" value="{",".join(map(str,eq))}">
+            <input type="hidden" name="num_cz" value="{",".join(map(str,cz))}">
+            <button class="btn btn-success w-100 py-2">Guardar Jugada</button>
+        </form>
+    </div>
+    '''
     return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
 
 @app.route('/logout')
@@ -118,4 +137,5 @@ def usuarios():
 # ... El resto de tus rutas (/resultados, /analitica, /guardar) irían aquí siguiendo este estilo
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
 
