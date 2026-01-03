@@ -8,15 +8,20 @@ app = Flask(__name__)
 
 # Función para conectar a PostgreSQL usando las variables de EasyPanel
 def get_db_connection():
-    # Usamos valores por defecto directos por si EasyPanel no lee las variables
-    conn = psycopg2.connect(
-        host=os.environ.get('DB_HOST', 'n8n_postgres'),
-        database=os.environ.get('DB_NAME', 'n8n'),
-        user=os.environ.get('DB_USER', 'postgres'),
-        password=os.environ.get('DB_PASSWORD', 'f98df37c825893961024'),
-        port=5432
-    )
-    return conn
+    # os.environ.get busca la variable en EasyPanel. 
+    # Si no la encuentra, el segundo valor es un "respaldo" o falla.
+    try:
+        conn = psycopg2.connect(
+            host=os.environ.get('DB_HOST'),
+            database=os.environ.get('DB_NAME'),
+            user=os.environ.get('DB_USER'),
+            password=os.environ.get('DB_PASSWORD'),
+            port=5432
+        )
+        return conn
+    except Exception as e:
+        print(f"Error conectando a la DB: {e}")
+        return None
 
 # Crear la tabla si no existe al arrancar
 def init_db():
@@ -125,4 +130,5 @@ def home():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
 
