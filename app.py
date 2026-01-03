@@ -19,127 +19,108 @@ def get_db_connection():
         port=5432
     )
 
-# --- DISEÑO HTML: LOGIN ---
-LOGIN_HTML = """
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso Privado</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: #f0f2f5; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .card { border-radius: 20px; border: none; width: 100%; max-width: 380px; }
-    </style>
-</head>
-<body>
-    <div class="card shadow p-4">
-        <h3 class="text-center mb-4">🔐 Melate Pro</h3>
-        {% if error %}<div class="alert alert-danger p-2 small text-center">{{ error }}</div>{% endif %}
-        <form method="POST">
-            <div class="mb-3">
-                <label class="form-label">Usuario</label>
-                <input type="text" name="user" class="form-control" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Contraseña</label>
-                <input type="password" name="pass" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Iniciar Sesión</button>
-        </form>
-    </div>
-</body>
-</html>
-"""
-
-# --- DISEÑO HTML: APLICACIÓN PRINCIPAL ---
+# --- DISEÑO HTML ---
 APP_HTML = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historial Melate - Privado</title>
+    <title>Melate Analizador - Privado</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background: #f8f9fa; padding-bottom: 50px; }
-        .card { border-radius: 15px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .ball { display: inline-block; width: 30px; height: 30px; line-height: 30px; background: #ffcc00; border-radius: 50%; text-align: center; font-weight: bold; margin: 2px; font-size: 0.75rem; border: 1px solid #d4ac0d; }
-        .badge-num { background: #6c5ce7; color: white; padding: 2px 6px; border-radius: 4px; margin-right: 2px; font-size: 0.8rem; }
-        .ganador-row { background-color: #d1e7dd !important; border-left: 5px solid #198754 !important; }
+        body { background: #f0f4f8; padding-bottom: 50px; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .ball { display: inline-block; width: 32px; height: 32px; line-height: 32px; background: #ffcc00; border-radius: 50%; text-align: center; font-weight: bold; margin: 2px; font-size: 0.8rem; border: 1px solid #d4ac0d; }
+        .match { background: #2ecc71 !important; color: white !important; border-color: #27ae60 !important; transform: scale(1.1); transition: 0.3s; }
+        .badge-aciertos { font-size: 0.7rem; padding: 4px 8px; border-radius: 10px; background: #34495e; color: white; }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-primary mb-4 shadow-sm">
+    <nav class="navbar navbar-dark bg-dark mb-4 shadow">
         <div class="container">
-            <span class="navbar-brand">🎰 Melate Pro Historial</span>
-            <a href="/logout" class="btn btn-outline-light btn-sm">Cerrar Sesión</a>
+            <span class="navbar-brand">🎰 Melate Inteligente</span>
+            <a href="/logout" class="btn btn-outline-light btn-sm">Salir</a>
         </div>
     </nav>
 
-    <div class="container" style="max-width: 650px;">
-        <div class="card p-4 mb-4 text-center shadow">
-            <form method="POST">
-                <button type="submit" name="accion" value="generar" class="btn btn-primary w-100 py-2">Generar Sorteo del Día</button>
+    <div class="container" style="max-width: 700px;">
+        <div class="card p-4 mb-4 border-primary border-top border-4">
+            <h5>🔍 Comprobar Resultados Oficiales</h5>
+            <p class="text-muted small">Ingresa los 6 números del sorteo oficial para buscar aciertos en tu historial.</p>
+            <form method="POST" class="row g-2">
+                {% for i in range(6) %}
+                <div class="col-2">
+                    <input type="number" name="ganador_{{i}}" class="form-control text-center" min="1" max="56" required>
+                </div>
+                {% endfor %}
+                <div class="col-12 mt-3">
+                    <button type="submit" name="accion" value="comprobar" class="btn btn-primary w-100">Analizar mi Historial</button>
+                </div>
             </form>
-            {% if eq %}
-            <div class="bg-light p-3 rounded mt-3 shadow-sm text-start border">
-                <div class="mb-2"><strong>Eq:</strong> {% for n in eq %}<div class="ball">{{ "%02d"|format(n) }}</div>{% endfor %}</div>
-                <div><strong>Cz:</strong> {% for n in cz %}<div class="ball" style="background:#a29bfe;">{{ "%02d"|format(n) }}</div>{% endfor %}</div>
-                <form method="POST" class="mt-3">
-                    <input type="hidden" name="num_eq" value="{{ eq|join(',') }}">
-                    <input type="hidden" name="num_cz" value="{{ cz|join(',') }}">
-                    <button type="submit" name="accion" value="guardar" class="btn btn-success w-100">⭐ Guardar en Historial</button>
-                </form>
-            </div>
-            {% endif %}
         </div>
 
-        <div class="card p-4 shadow">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="m-0"><i class="bi bi-clock-history"></i> Historial de Jugadas</h5>
-                <form action="/limpiar" method="POST" onsubmit="return confirm('¿Borrar todo el historial?')">
-                    <button class="btn btn-sm text-danger"><i class="bi bi-trash"></i> Vaciar</button>
-                </form>
-            </div>
-
-            {% for f in favs %}
-            <div class="p-3 mb-2 rounded border shadow-sm {% if f.ganador %}ganador-row{% else %}bg-white{% endif %}">
-                <div class="d-flex justify-content-between align-items-start">
-                    <small class="text-muted">{{ f.fecha.strftime('%d %b, %H:%M') }}</small>
-                    <form method="POST" action="/marcar_ganador">
-                        <input type="hidden" name="id" value="{{ f.id }}">
-                        <button type="submit" class="btn btn-sm {% if f.ganador %}btn-success{% else %}btn-outline-secondary{% endif %}">
-                            <i class="bi bi-trophy-fill"></i>
-                        </button>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card p-4 mb-4 text-center">
+                    <form method="POST">
+                        <button type="submit" name="accion" value="generar" class="btn btn-success w-100">Generar Nuevas Series</button>
                     </form>
+                    {% if eq %}
+                    <div class="bg-light p-3 rounded mt-3 border text-start">
+                        <div class="mb-2"><strong>Eq:</strong> {% for n in eq %}<div class="ball">{{ "%02d"|format(n) }}</div>{% endfor %}</div>
+                        <div><strong>Cz:</strong> {% for n in cz %}<div class="ball" style="background:#a29bfe;">{{ "%02d"|format(n) }}</div>{% endfor %}</div>
+                        <form method="POST" class="mt-3">
+                            <input type="hidden" name="num_eq" value="{{ eq|join(',') }}">
+                            <input type="hidden" name="num_cz" value="{{ cz|join(',') }}">
+                            <button type="submit" name="accion" value="guardar" class="btn btn-outline-dark btn-sm w-100">⭐ Guardar para Seguimiento</button>
+                        </form>
+                    </div>
+                    {% endif %}
                 </div>
-                <div class="mt-2">
-                    {% for n in f.serie_eq.split(',') %}<span class="badge-num">{{n}}</span>{% endfor %}
-                    <span class="mx-1">|</span>
-                    {% for n in f.serie_cz.split(',') %}<span class="badge-num" style="background:#a29bfe;">{{n}}</span>{% endfor %}
+
+                <div class="card p-4 shadow">
+                    <h5 class="mb-3"><i class="bi bi-list-check"></i> Historial de Seguimiento</h5>
+                    {% for f in favs %}
+                    <div class="p-3 mb-3 border rounded bg-white">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">{{ f.fecha.strftime('%d/%m/%Y %H:%M') }}</small>
+                            {% if f.aciertos > 0 %}
+                            <span class="badge-aciertos">✨ {{ f.aciertos }} Aciertos</span>
+                            {% endif %}
+                        </div>
+                        <div class="mt-2">
+                            {% for n in f.serie_eq.split(',') %}
+                                <div class="ball {% if n|int in oficiales %}match{% endif %}">{{n}}</div>
+                            {% endfor %}
+                            <span class="mx-2">|</span>
+                            {% for n in f.serie_cz.split(',') %}
+                                <div class="ball {% if n|int in oficiales %}match{% endif %}" style="background:#a29bfe;">{{n}}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
-            {% endfor %}
-            {% if not favs %}
-                <p class="text-muted text-center py-4">No hay jugadas guardadas.</p>
-            {% endif %}
         </div>
     </div>
 </body>
 </html>
 """
 
+# [Aquí va el mismo LOGIN_HTML que ya te funcionó perfectamente]
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # ... (Usa el mismo código de login que ya tienes)
     error = None
     if request.method == 'POST':
         if request.form['user'] == ADMIN_USER and request.form['pass'] == ADMIN_PASS:
             session['logged_in'] = True
             return redirect(url_for('home'))
-        error = 'Credenciales inválidas'
+        error = 'Acceso denegado'
+    # Asegúrate de que la variable LOGIN_HTML esté definida arriba
     return render_template_string(LOGIN_HTML, error=error)
 
 @app.route('/logout')
@@ -149,10 +130,11 @@ def logout():
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
+    if not session.get('logged_in'): return redirect(url_for('login'))
     
     eq, cz = None, None
+    oficiales = session.get('oficiales', []) # Recuperamos de la sesión si ya comprobamos
+    
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -165,35 +147,21 @@ def home():
             cur.execute('INSERT INTO favoritos (serie_eq, serie_cz) VALUES (%s, %s)', 
                         (request.form.get('num_eq'), request.form.get('num_cz')))
             conn.commit()
+        elif accion == 'comprobar':
+            oficiales = [int(request.form.get(f'ganador_{i}')) for i in range(6)]
+            session['oficiales'] = oficiales # Guardar para resaltar
 
-    cur.execute('SELECT * FROM favoritos ORDER BY fecha DESC LIMIT 20')
+    cur.execute('SELECT * FROM favoritos ORDER BY fecha DESC LIMIT 15')
     favs = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template_string(APP_HTML, eq=eq, cz=cz, favs=favs)
+    
+    # Lógica de cálculo de aciertos en tiempo real
+    for f in favs:
+        nums_f = [int(x) for x in (f['serie_eq'] + "," + f['serie_cz']).split(',')]
+        f['aciertos'] = len(set(nums_f) & set(oficiales))
 
-@app.route('/marcar_ganador', methods=['POST'])
-def marcar_ganador():
-    if not session.get('logged_in'): return redirect(url_for('login'))
-    id_fav = request.form.get('id')
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('UPDATE favoritos SET ganador = NOT ganador WHERE id = %s', (id_fav,))
-    conn.commit()
     cur.close()
     conn.close()
-    return redirect(url_for('home'))
-
-@app.route('/limpiar', methods=['POST'])
-def limpiar():
-    if not session.get('logged_in'): return redirect(url_for('login'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM favoritos')
-    conn.commit()
-    cur.close()
-    conn.close()
-    return redirect(url_for('home'))
+    return render_template_string(APP_HTML, eq=eq, cz=cz, favs=favs, oficiales=oficiales)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
