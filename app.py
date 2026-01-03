@@ -10,4 +10,5 @@ def home():
 if __name__ == "__main__":
     # Importante usar el puerto que EasyPanel espera o definir uno
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="62.72.3.162", port=port)
+
