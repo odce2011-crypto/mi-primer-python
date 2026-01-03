@@ -3,12 +3,7 @@ import os
 
 app = Flask(__name__)
 
-@app.routefrom flask import Flask
-import os
-
-app = Flask(__name__)
-
-# El código HTML con diseño profesional (Bootstrap)
+# El código HTML con diseño profesional
 html_template = """
 <!DOCTYPE html>
 <html lang="es">
@@ -20,7 +15,7 @@ html_template = """
     <style>
         body { background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
         .card { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .btn-custom { background-color: #6c5ce7; color: white; border-radius: 10px; padding: 10px 20px; transition: 0.3s; }
+        .btn-custom { background-color: #6c5ce7; color: white; border-radius: 10px; padding: 10px 20px; transition: 0.3s; text-decoration: none; }
         .btn-custom:hover { background-color: #a29bfe; color: white; transform: translateY(-3px); }
     </style>
 </head>
@@ -33,7 +28,7 @@ html_template = """
             <p class="text-muted">¿Qué quieres construir ahora?</p>
             <div class="d-grid gap-2">
                 <a href="#" class="btn btn-custom">Explorar mi servidor</a>
-                <button class="btn btn-outline-secondary" onclick="alert('¡Funciona!')">Probar Botón</button>
+                <button class="btn btn-outline-secondary" onclick="alert('¡El servidor responde perfectamente!')">Probar Botón</button>
             </div>
         </div>
     </div>
@@ -47,14 +42,4 @@ def hello():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)('/')
-def hello():
-    return "¡Hola oscarito! ya se que quieres crear una serie."
-
-if __name__ == "__main__":
-    # Esto le pregunta al sistema: ¿Qué puerto tienes libre? Si no hay uno, usa el 5000.
-    port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-
-
-
