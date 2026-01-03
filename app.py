@@ -1,58 +1,87 @@
-from flask import Flask, request
+from flask import Flask, render_template_string, request
+import random
 import os
 
 app = Flask(__name__)
 
-# Diseño con formulario
-def get_html(mensaje_saludo=""):
-    return f"""
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Mi Primera App Interactiva</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-            body {{ background-color: #f0f2f5; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }}
-            .card {{ border: none; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }}
-            .btn-primary {{ background-color: #4834d4; border: none; }}
-            .welcome-msg {{ color: #4834d4; font-weight: bold; font-size: 1.2rem; }}
-        </style>
-    </head>
-    <body>
-        <div class="card p-4">
-            <h3 class="text-center mb-4">¿Cómo te llamas?</h3>
+# Lógica para generar los números
+def generar_melate():
+    # Equilibrio Estadístico (Números repartidos en el rango 1-56)
+    equilibrio = sorted(random.sample(range(1, 57), 6))
+    
+    # Cazadora (Simulación de números que "podrían salir" por azar)
+    cazadora = sorted(random.sample(range(1, 57), 6))
+    
+    return equilibrio, cazadora
+
+# Diseño Visual con Bootstrap
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador Melate - Mi VPS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .container { max-width: 600px; margin-top: 50px; }
+        .ball { 
+            display: inline-block; width: 45px; height: 45px; line-height: 45px; 
+            background: #ffcc00; color: #333; border-radius: 50%; 
+            text-align: center; font-weight: bold; margin: 5px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 2px solid #e6b800;
+        }
+        .card { border-radius: 20px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .btn-generate { background: #6c5ce7; color: white; border-radius: 12px; font-weight: bold; }
+        .btn-generate:hover { background: #a29bfe; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container text-center">
+        <div class="card p-5">
+            <h1 class="mb-4">🎰 Melate Generator</h1>
+            <p class="text-muted">Genera tus series basadas en pakin.lat/melate</p>
             
-            <form method="POST" class="text-center">
-                <div class="mb-3">
-                    <input type="text" name="nombre_usuario" class="form-control" placeholder="Escribe tu nombre aquí" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Enviar a mi VPS</button>
+            <form method="POST">
+                <button type="submit" class="btn btn-generate btn-lg w-100 mb-4">¡Generar Números!</button>
             </form>
 
-            <div class="mt-4 text-center">
-                <p class="welcome-msg">{mensaje_saludo}</p>
+            {% if equilibrio %}
+            <div class="mt-4 text-start">
+                <h5>📊 Equilibrio Estadístico:</h5>
+                <div class="mb-4">
+                    {% for n in equilibrio %}
+                    <div class="ball">{{ "%02d" | format(n) }}</div>
+                    {% endfor %}
+                </div>
+
+                <h5>🎯 Serie Cazadora:</h5>
+                <div>
+                    {% for n in cazadora %}
+                    <div class="ball" style="background: #a29bfe; border-color: #6c5ce7;">{{ "%02d" | format(n) }}</div>
+                    {% endfor %}
+                </div>
             </div>
+            {% endif %}
             
             <hr>
-            <p class="text-muted small text-center">Esta respuesta la procesa Python en tiempo real.</p>
+            <p class="small text-muted">Corriendo en Python @ Hostinger VPS</p>
         </div>
-    </body>
-    </html>
-    """
+    </div>
+</body>
+</html>
+"""
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    saludo = ""
+    equilibrio = None
+    cazadora = None
     if request.method == 'POST':
-        # Aquí capturamos lo que el usuario escribió en el cuadro de texto
-        nombre = request.form.get('nombre_usuario')
-        saludo = f"¡Hola, {nombre}! 👋 ponte a estudiar."
+        equilibrio, cazadora = generar_melate()
     
-    return get_html(saludo)
+    return render_template_string(HTML_TEMPLATE, equilibrio=equilibrio, cazadora=cazadora)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-
