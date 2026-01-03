@@ -3,12 +3,11 @@ import os
 
 app = Flask(__name__)
 
-@app.get("/")
-def home():
-    return "<h1>¡Hola Mundo!</h1><p>Mi Python está corriendo en Hostinger con EasyPanel.</p>"
+@app.route('/')
+def hello():
+    return "¡Hola Mundo! Finalmente lo logramos en Hostinger."
 
 if __name__ == "__main__":
-    # Importante usar el puerto que EasyPanel espera o definir uno
+    # Esto le pregunta al sistema: ¿Qué puerto tienes libre? Si no hay uno, usa el 5000.
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="62.72.3.162", port=port)
-
+    app.run(host='0.0.0.0', port=port)
