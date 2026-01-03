@@ -23,6 +23,8 @@ def get_navbar():
     </nav>
     """
 
+# --- templates.py ---
+
 LAYOUT_HTML = """
 <!DOCTYPE html>
 <html lang="es">
@@ -31,7 +33,24 @@ LAYOUT_HTML = """
     <title>Melate Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>.ball { display: inline-block; width: 30px; height: 30px; line-height: 30px; background: #ffcc00; border-radius: 50%; text-align: center; font-weight: bold; margin: 2px; border: 1px solid #d4ac0d; font-size: 0.75rem; }</style>
+    <style>
+        /* ESTO ES LO QUE ARREGLA LA FILA */
+        .ball { 
+            display: inline-block !important; /* Fuerza a que se pongan una tras otra */
+            width: 35px; 
+            height: 35px; 
+            line-height: 35px; 
+            background: #ffcc00; 
+            border-radius: 50%; 
+            text-align: center; 
+            font-weight: bold; 
+            margin: 4px; 
+            border: 1px solid #d4ac0d; 
+            font-size: 0.85rem; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card { border-radius: 15px; border: none; }
+    </style>
 </head>
 <body class="bg-light">
     {{ navbar | safe }}
