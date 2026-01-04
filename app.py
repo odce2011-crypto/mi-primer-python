@@ -4,24 +4,40 @@ from database import get_db_connection, init_db
 from templates import LAYOUT_HTML, LOGIN_HTML, get_navbar
 from logic import generar_melate, procesar_analitica
 from psycopg2.extras import RealDictCursor
+from datetime import datetime
+import pytz 
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'multi-2026')
+
+def get_local_time():
+    tz = pytz.timezone('America/Chicago')
+    return datetime.now(tz)
 
 # Iniciar tablas al arrancar
 with app.app_context():
     init_db()
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM usuarios WHERE username=%s AND password=%s", (request.form['user'], request.form['pass']))
-        acc = cur.fetchone(); cur.close(); conn.close()
-        if acc:
-            session.update({'logged_in': True, 'user': acc['username'], 'es_admin': acc['es_admin']})
-            return redirect(url_for('home'))
-    return render_template_string(LOGIN_HTML)
+@app.route('/perfil')
+def perfil():
+    # ... código anterior ...
+    
+    # Obtenemos la hora exacta de Chicago para mostrarla en la tarjeta
+    hora_actual = get_local_time().strftime('%d/%m/%Y %I:%M %p')
+    
+    content = f"""
+    <div class="profile-card shadow mx-auto" style="max-width: 400px;">
+        <div class="profile-header"></div>
+        <div class="profile-avatar"><i class="bi bi-person-fill text-primary"></i></div>
+        <div class="card-body text-center pb-4">
+            <h4 class="mb-1">{session.get('user').capitalize()}</h4>
+            <span class="badge bg-info mb-3">Zona: Chicago</span>
+            <p class="small text-muted">Hora local: <br><strong>{hora_actual}</strong></p>
+            <hr>
+            </div>
+    </div>
+    """
+    return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
 
 @app.route('/')
 def home():
@@ -179,6 +195,7 @@ def perfil():
 # ... El resto de tus rutas (/resultados, /analitica, /guardar) irían aquí siguiendo este estilo
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
 
 
 
