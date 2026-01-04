@@ -59,6 +59,33 @@ LAYOUT_HTML = """
         .card { border-radius: 15px; border: none; }
         /* Ajuste para que el menú no tape el contenido al abrirse en móvil */
         .navbar-collapse { justify-content: flex-end; }
+
+        /* Estilo para la Tarjeta de Perfil */
+        .profile-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            border: none;
+            transition: transform 0.3s;
+        }
+        .profile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100px;
+        }
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            background: #f8f9fa;
+            border-radius: 50%;
+            margin: -40px auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border: 4px solid white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
     </style>
 </head>
 <body class="bg-light">
