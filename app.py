@@ -127,15 +127,25 @@ def resultados():
         btn_borrar = f'<td><a href="/borrar/{f["id"]}" class="text-danger" onclick="return confirm(\'¿Borrar este registro?\')"><i class="bi bi-trash"></i></a></td>'
         rows += f"<tr><td>{f_str}</td><td>{f['serie_eq']}</td><td>{f['serie_cz']}</td>{btn_borrar}</tr>"
     
-    content = f"""
+content = f"""
     <div class="card p-4 shadow">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5>📋 Historial Reciente</h5>
-            <a href="/descargar" class="btn btn-sm btn-outline-success">Exportar Excel</a>
+            <div>
+                <a href="/descargar" class="btn btn-sm btn-outline-success">Excel</a>
+            </div>
         </div>
+        
+        {" " if not session.get('es_admin') else '''
+        <form method="POST" action="/limpiar_errores" class="mb-3 d-flex gap-2">
+            <input type="date" name="fecha_error" class="form-control form-control-sm" style="width:150px">
+            <button class="btn btn-danger btn-sm">Borrar por día</button>
+        </form>
+        '''}
+
         <div class="table-responsive">
             <table class="table table-hover text-center">
-                <thead><tr><th>Fecha (Chicago)</th><th>Eq</th><th>Cz</th></tr></thead>
+                <thead><tr><th>Fecha</th><th>Eq</th><th>Cz</th><th></th></tr></thead>
                 <tbody>{rows}</tbody>
             </table>
         </div>
@@ -246,6 +256,7 @@ def limpiar_errores():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
 
 
 
