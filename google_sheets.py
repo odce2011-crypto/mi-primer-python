@@ -7,24 +7,22 @@ def exportar_a_sheets(datos):
     try:
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         
-        # BUSCA LAS CREDENCIALES: 
-        # Intentará leer un archivo llamado 'google_creds.json' en tu carpeta principal
-        path_creds = os.path.join(os.path.dirname(__file__), 'google_creds.json')
+        # Leemos el contenido del JSON desde una variable de entorno
+        info_json = os.environ.get('GOOGLE_JSON')
         
-        if not os.path.exists(path_creds):
-            print("Archivo google_creds.json no encontrado.")
+        if not info_json:
+            print("Error: La variable GOOGLE_JSON no está configurada")
             return False
 
-        creds = Credentials.from_service_account_file(path_creds, scopes=scope)
+        # Cargamos las credenciales desde el texto
+        info_dict = json.loads(info_json)
+        creds = Credentials.from_service_account_info(info_dict, scopes=scope)
         client = gspread.authorize(creds)
         
-        # PON AQUÍ EL NOMBRE EXACTO DE TU HOJA (la que compartiste con el email de la API)
-        # O usa el ID de la URL: client.open_by_key('ID_DE_LA_HOJA')
+        # Abrir la hoja
         sheet = client.open("Melate_Registros").sheet1
-        
-        # Inserta la fila al final
         sheet.append_row(datos)
         return True
     except Exception as e:
-        print(f"Error detallado en Google Sheets: {e}")
+        print(f"Error en Google Sheets: {e}")
         return False
