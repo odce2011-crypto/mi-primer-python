@@ -25,30 +25,42 @@ def get_navbar():
 
 # --- templates.py ---
 
+# --- templates.py ---
+
 LAYOUT_HTML = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Melate Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        /* ESTO ES LO QUE ARREGLA LA FILA */
+        /* Contenedor flexible para que las bolitas no se mochen */
+        .balls-container {
+            display: flex;
+            flex-wrap: wrap; /* Esto hace que bajen al siguiente renglón en el celular */
+            justify-content: center; /* Centradas en PC y Móvil */
+            gap: 5px; /* Espacio entre bolitas */
+            margin-bottom: 15px;
+        }
+
         .ball { 
-            display: inline-block !important; /* Fuerza a que se pongan una tras otra */
-            width: 35px; 
-            height: 35px; 
-            line-height: 35px; 
+            width: 38px; 
+            height: 38px; 
+            line-height: 38px; 
             background: #ffcc00; 
             border-radius: 50%; 
             text-align: center; 
             font-weight: bold; 
-            margin: 4px; 
             border: 1px solid #d4ac0d; 
-            font-size: 0.85rem; 
+            font-size: 0.9rem; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        
+        /* Ajuste para que la tarjeta no sea tan ancha en móvil */
+        .container { padding: 10px; }
         .card { border-radius: 15px; border: none; }
     </style>
 </head>
