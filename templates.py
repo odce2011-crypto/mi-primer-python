@@ -7,7 +7,6 @@ def get_navbar():
     if session.get('es_admin'):
         admin_link = '<li class="nav-item"><a class="nav-link text-warning" href="/usuarios">⚙️ Usuarios</a></li>'
     
-    # Añadimos el botón "navbar-toggler" para móviles
     return f"""
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow">
         <div class="container">
@@ -23,7 +22,9 @@ def get_navbar():
                     {admin_link}
                 </ul>
                 <div class="d-flex align-items-center">
-                    <span class="navbar-text me-3 small text-info">👤 {session.get('user', '')}</span>
+                    <a href="/perfil" class="nav-link me-3 small text-info">
+                        👤 {session.get('user', '').capitalize()}
+                    </a>
                     <a href="/logout" class="btn btn-outline-danger btn-sm">Salir</a>
                 </div>
             </div>
