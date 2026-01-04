@@ -218,6 +218,32 @@ def usuarios():
     """
     return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
 
+@app.route('/borrar/<int:id>')
+def borrar_registro(id):
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM favoritos WHERE id = %s", (id,))
+    conn.commit()
+    cur.close(); conn.close()
+    return redirect(url_for('resultados'))
+
+# RUTA ESPECIAL: Borrar todos los registros de un día específico (para limpiar lo que salió mal)
+@app.route('/limpiar_errores', methods=['POST'])
+def limpiar_errores():
+    if not session.get('es_admin'): return redirect(url_for('home'))
+    fecha_mal = request.form.get('fecha_error') # Formato YYYY-MM-DD
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    # Borra los registros de esa fecha que se cargaron antes de arreglar el horario
+    cur.execute("DELETE FROM favoritos WHERE DATE(fecha) = %s", (fecha_mal,))
+    conn.commit()
+    cur.close(); conn.close()
+    return redirect(url_for('resultados'))
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
 
