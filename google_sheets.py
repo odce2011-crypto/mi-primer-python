@@ -24,7 +24,7 @@ def exportar_a_sheets(datos):
         # 4. Abrimos la hoja (asegúrate que el nombre coincida)
         # También puedes usar el ID que sale en la URL de tu hoja:
         # sheet = client.open_by_key("TU_ID_LARGO_DE_LA_URL").sheet1
-        sheet = client.open("Melate_Registros").sheet1
+        sheet = client.open_by_key("1_S13i4VvV31Ecv_4dv9CkaHtQklAxarQf6HR7EpBins").sheet1
         
         sheet.append_row(datos)
         return True
