@@ -135,11 +135,51 @@ def usuarios():
     """
     return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
 
+@app.route('/perfil')
+def perfil():
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    
+    # Consultamos cuántas series hay en total para darle una estadística al usuario
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM favoritos")
+    total_series = cur.fetchone()[0]
+    cur.close(); conn.close()
+
+    # Usamos iconos de Bootstrap para el avatar y el rango
+    rango = "Administrador" if session.get('es_admin') else "Usuario Estándar"
+    badge_color = "danger" if session.get('es_admin') else "info"
+    
+    content = f"""
+    <div class="profile-card shadow mx-auto" style="max-width: 400px;">
+        <div class="profile-header"></div>
+        <div class="profile-avatar">
+            <i class="bi bi-person-fill text-primary"></i>
+        </div>
+        <div class="card-body text-center pb-4">
+            <h4 class="mb-1">{session.get('user').capitalize()}</h4>
+            <span class="badge bg-{badge_color} mb-3">{rango}</span>
+            <hr>
+            <div class="row">
+                <div class="col-12">
+                    <p class="text-muted small mb-1">Series Guardadas en el Sistema</p>
+                    <h5 class="fw-bold">{total_series}</h5>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="/logout" class="btn btn-outline-danger btn-sm w-100">Cerrar Sesión</a>
+            </div>
+        </div>
+    </div>
+    """
+    return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
+
 
 
 # ... El resto de tus rutas (/resultados, /analitica, /guardar) irían aquí siguiendo este estilo
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
 
 
 
