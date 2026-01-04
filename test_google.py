@@ -10,6 +10,7 @@ def probar_conexion():
     info_json = os.environ.get('GOOGLE_JSON')
     if not info_json:
         print("❌ ERROR: La variable GOOGLE_JSON no existe en EasyPanel.")
+        print("hola")
         return
 
     try:
