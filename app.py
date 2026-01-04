@@ -1,82 +1,105 @@
 from flask import Flask, render_template_string, request, redirect, url_for, session, send_file
-import os, io, pandas as pd
+import os, io, random
+import pandas as pd
+from datetime import datetime
+import pytz
+from psycopg2.extras import RealDictCursor
+
+# Importamos nuestros módulos locales
 from database import get_db_connection, init_db
 from templates import LAYOUT_HTML, LOGIN_HTML, get_navbar
 from logic import generar_melate, procesar_analitica
-from psycopg2.extras import RealDictCursor
-from datetime import datetime
-import pytz 
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'multi-2026')
+app.secret_key = os.environ.get('SECRET_KEY', 'multi-2026-safe-key')
 
+# Configuración de zona horaria
 def get_local_time():
     tz = pytz.timezone('America/Chicago')
     return datetime.now(tz)
 
-# Iniciar tablas al arrancar
+# Iniciar base de datos al arrancar
 with app.app_context():
     init_db()
 
-@app.route('/perfil')
-def perfil():
-    # ... código anterior ...
-    
-    # Obtenemos la hora exacta de Chicago para mostrarla en la tarjeta
-    hora_actual = get_local_time().strftime('%d/%m/%Y %I:%M %p')
-    
-    content = f"""
-    <div class="profile-card shadow mx-auto" style="max-width: 400px;">
-        <div class="profile-header"></div>
-        <div class="profile-avatar"><i class="bi bi-person-fill text-primary"></i></div>
-        <div class="card-body text-center pb-4">
-            <h4 class="mb-1">{session.get('user').capitalize()}</h4>
-            <span class="badge bg-info mb-3">Zona: Chicago</span>
-            <p class="small text-muted">Hora local: <br><strong>{hora_actual}</strong></p>
-            <hr>
-            </div>
-    </div>
-    """
-    return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
+# --- RUTAS DE ACCESO ---
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        user, pw = request.form['user'], request.form['pass']
+        conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM usuarios WHERE username=%s AND password=%s", (user, pw))
+        acc = cur.fetchone(); cur.close(); conn.close()
+        if acc:
+            session.update({'logged_in': True, 'user': acc['username'], 'es_admin': acc['es_admin']})
+            return redirect(url_for('home'))
+        return render_template_string(LOGIN_HTML, error="Usuario o clave incorrectos")
+    return render_template_string(LOGIN_HTML)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+# --- RUTAS PRINCIPALES ---
 
 @app.route('/')
 def home():
     if not session.get('logged_in'): return redirect(url_for('login'))
-    content = '<div class="card p-5 text-center shadow"><h2>🎰 Bienvenido</h2><form method="POST" action="/generar"><button class="btn btn-primary btn-lg w-100">Generar</button></form></div>'
+    content = """
+    <div class="card p-5 shadow text-center mx-auto" style="max-width: 500px; border-radius: 20px;">
+        <h2 class="mb-4">🎰 Melate Pro</h2>
+        <p class="text-muted">Genera jugadas basadas en algoritmos de Equilibrio y Cazadora.</p>
+        <form method="POST" action="/generar">
+            <button class="btn btn-primary btn-lg w-100 py-3 shadow">Generar Nueva Jugada</button>
+        </form>
+    </div>
+    """
     return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
 
-# --- app.py (Ruta /generar) ---
 @app.route('/generar', methods=['POST'])
 def generar():
+    if not session.get('logged_in'): return redirect(url_for('login'))
     eq, cz = generar_melate()
+    
+    # Construcción de bolitas visuales
     balls_eq = "".join([f'<div class="ball">{n:02d}</div>' for n in eq])
     balls_cz = "".join([f'<div class="ball" style="background:#a29bfe; border-color:#6c5ce7;">{n:02d}</div>' for n in cz])
     
     content = f'''
-    <div class="card p-4 shadow-sm mx-auto" style="max-width: 100%; width: 550px;">
-        <h4 class="mb-4 text-center">Series Generadas</h4>
-        
+    <div class="card p-4 shadow mx-auto text-center" style="max-width: 550px;">
+        <h4 class="mb-4">Resultados del Algoritmo</h4>
         <div class="mb-4">
-            <h6 class="text-muted small">⚖️ Equilibrio:</h6>
-            <div class="balls-container">{balls_eq}</div> </div>
-        
+            <h6 class="text-muted small text-start">⚖️ Serie de Equilibrio:</h6>
+            <div class="balls-container">{balls_eq}</div>
+        </div>
         <div class="mb-4">
-            <h6 class="text-muted small">🏹 Cazadora:</h6>
-            <div class="balls-container">{balls_cz}</div> </div>
-        
+            <h6 class="text-muted small text-start">🏹 Serie Cazadora:</h6>
+            <div class="balls-container">{balls_cz}</div>
+        </div>
         <form method="POST" action="/guardar">
             <input type="hidden" name="num_eq" value="{",".join(map(str,eq))}">
             <input type="hidden" name="num_cz" value="{",".join(map(str,cz))}">
-            <button class="btn btn-success w-100 py-3">⭐ Guardar Jugada</button>
+            <button class="btn btn-success w-100 py-3 shadow-sm">⭐ Guardar en Historial</button>
         </form>
+        <a href="/" class="btn btn-link mt-3 text-decoration-none text-muted">Intentar de nuevo</a>
     </div>
     '''
     return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
-    return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
 
-@app.route('/logout')
-def logout():
-    session.clear(); return redirect(url_for('login'))
+@app.route('/guardar', methods=['POST'])
+def guardar():
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    
+    # Forzamos la hora de Chicago al guardar en la DB
+    fecha_chicago = get_local_time()
+    
+    conn = get_db_connection(); cur = conn.cursor()
+    cur.execute('INSERT INTO favoritos (serie_eq, serie_cz, fecha) VALUES (%s, %s, %s)', 
+                (request.form.get('num_eq'), request.form.get('num_cz'), fecha_chicago))
+    conn.commit(); cur.close(); conn.close()
+    return redirect(url_for('resultados'))
 
 @app.route('/resultados')
 def resultados():
@@ -85,14 +108,54 @@ def resultados():
     cur.execute("SELECT * FROM favoritos ORDER BY fecha DESC LIMIT 50")
     favs = cur.fetchall(); cur.close(); conn.close()
     
-    rows = "".join([f"<tr><td>{f['fecha'].strftime('%d/%m %H:%M')}</td><td>{f['serie_eq']}</td><td>{f['serie_cz']}</td></tr>" for f in favs])
+    rows = ""
+    for f in favs:
+        # Mostramos la fecha formateada
+        f_str = f['fecha'].strftime('%d/%m %I:%M %p')
+        rows += f"<tr><td>{f_str}</td><td>{f['serie_eq']}</td><td>{f['serie_cz']}</td></tr>"
+    
     content = f"""
     <div class="card p-4 shadow">
-        <div class="d-flex justify-content-between mb-3">
-            <h5>📋 Historial</h5>
-            <a href="/descargar" class="btn btn-sm btn-success">Excel</a>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>📋 Historial Reciente</h5>
+            <a href="/descargar" class="btn btn-sm btn-outline-success">Exportar Excel</a>
         </div>
-        <table class="table table-sm text-center"><thead><tr><th>Fecha</th><th>Eq</th><th>Cz</th></tr></thead><tbody>{rows}</tbody></table>
+        <div class="table-responsive">
+            <table class="table table-hover text-center">
+                <thead><tr><th>Fecha (Chicago)</th><th>Eq</th><th>Cz</th></tr></thead>
+                <tbody>{rows}</tbody>
+            </table>
+        </div>
+    </div>
+    """
+    return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
+
+@app.route('/perfil')
+def perfil():
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    
+    conn = get_db_connection(); cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM favoritos")
+    total = cur.fetchone()[0]; cur.close(); conn.close()
+
+    hora_actual = get_local_time().strftime('%d/%m/%Y %I:%M %p')
+    rango = "Administrador" if session.get('es_admin') else "Usuario"
+    color = "danger" if session.get('es_admin') else "info"
+    
+    content = f"""
+    <div class="profile-card shadow mx-auto mt-2" style="max-width: 400px; border-radius: 20px; background: white; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 80px;"></div>
+        <div style="width: 80px; height: 80px; background: white; border-radius: 50%; margin: -40px auto 10px; display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 4px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <i class="bi bi-person-circle text-primary"></i>
+        </div>
+        <div class="p-4 text-center">
+            <h4 class="mb-1">{session.get('user', '').capitalize()}</h4>
+            <span class="badge bg-{color} mb-3">{rango}</span>
+            <p class="text-muted small">🕒 Zona Horaria: Chicago<br><strong>{hora_actual}</strong></p>
+            <hr>
+            <h5 class="fw-bold mb-0">{total}</h5>
+            <p class="text-muted small">Series Totales Registradas</p>
+        </div>
     </div>
     """
     return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
@@ -105,22 +168,13 @@ def analitica():
     conn.close()
     
     if df.empty:
-        content = "<div class='alert alert-info'>Sin datos para analizar.</div>"
+        content = "<div class='alert alert-light text-center shadow-sm'>No hay datos suficientes para el análisis.</div>"
     else:
-        top_10 = procesar_analitica(df) # Llamamos a la lógica del archivo logic.py
-        list_items = "".join([f"<li class='list-group-item d-flex justify-content-between'>Número {n} <b>{c} veces</b></li>" for n, c in top_10])
-        content = f"<div class='card p-4 shadow mx-auto' style='max-width: 400px;'><h5>🔥 Top 10 Números</h5><ul class='list-group'>{list_items}</ul></div>"
+        top_10 = procesar_analitica(df)
+        items = "".join([f"<li class='list-group-item d-flex justify-content-between align-items-center'>Número {n} <span class='badge bg-primary rounded-pill'>{c} veces</span></li>" for n, c in top_10])
+        content = f"<div class='card p-4 shadow mx-auto' style='max-width: 450px;'><h5>🔥 Números más Frecuentes</h5><ul class='list-group mt-3'>{items}</ul></div>"
     
     return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
-
-@app.route('/guardar', methods=['POST'])
-def guardar():
-    if not session.get('logged_in'): return redirect(url_for('login'))
-    conn = get_db_connection(); cur = conn.cursor()
-    cur.execute('INSERT INTO favoritos (serie_eq, serie_cz) VALUES (%s, %s)', 
-                (request.form.get('num_eq'), request.form.get('num_cz')))
-    conn.commit(); cur.close(); conn.close()
-    return redirect(url_for('resultados'))
 
 @app.route('/descargar')
 def descargar():
@@ -132,8 +186,7 @@ def descargar():
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False)
     output.seek(0)
-    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
-                     as_attachment=True, download_name="Melate_Export.xlsx")
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f"Melate_Export_{get_local_time().strftime('%Y%m%d')}.xlsx")
 
 @app.route('/usuarios')
 def usuarios():
@@ -142,61 +195,16 @@ def usuarios():
     cur.execute("SELECT * FROM usuarios ORDER BY es_admin DESC")
     users = cur.fetchall(); cur.close(); conn.close()
     
-    rows = "".join([f"<tr><td>{u['username']}</td><td>{'Admin' if u['es_admin'] else 'User'}</td></tr>" for u in users])
+    rows = "".join([f"<tr><td>{u['username']}</td><td>{'<span class="badge bg-danger">Admin</span>' if u['es_admin'] else 'Usuario'}</td></tr>" for u in users])
     content = f"""
     <div class="card p-4 shadow">
-        <h5>👥 Usuarios</h5>
-        <table class="table"><thead><tr><th>User</th><th>Rango</th></tr></thead><tbody>{rows}</tbody></table>
-    </div>
-    """
-    return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
-
-@app.route('/perfil')
-def perfil():
-    if not session.get('logged_in'): return redirect(url_for('login'))
-    
-    # Consultamos cuántas series hay en total para darle una estadística al usuario
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM favoritos")
-    total_series = cur.fetchone()[0]
-    cur.close(); conn.close()
-
-    # Usamos iconos de Bootstrap para el avatar y el rango
-    rango = "Administrador" if session.get('es_admin') else "Usuario Estándar"
-    badge_color = "danger" if session.get('es_admin') else "info"
-    
-    content = f"""
-    <div class="profile-card shadow mx-auto" style="max-width: 400px;">
-        <div class="profile-header"></div>
-        <div class="profile-avatar">
-            <i class="bi bi-person-fill text-primary"></i>
-        </div>
-        <div class="card-body text-center pb-4">
-            <h4 class="mb-1">{session.get('user').capitalize()}</h4>
-            <span class="badge bg-{badge_color} mb-3">{rango}</span>
-            <hr>
-            <div class="row">
-                <div class="col-12">
-                    <p class="text-muted small mb-1">Series Guardadas en el Sistema</p>
-                    <h5 class="fw-bold">{total_series}</h5>
-                </div>
-            </div>
-            <div class="mt-4">
-                <a href="/logout" class="btn btn-outline-danger btn-sm w-100">Cerrar Sesión</a>
-            </div>
+        <h5>👥 Gestión de Accesos</h5>
+        <div class="table-responsive mt-3">
+            <table class="table align-middle"><thead><tr><th>Usuario</th><th>Rango</th></tr></thead><tbody>{rows}</tbody></table>
         </div>
     </div>
     """
     return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
 
-
-
-# ... El resto de tus rutas (/resultados, /analitica, /guardar) irían aquí siguiendo este estilo
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
-
-
-
-
-
