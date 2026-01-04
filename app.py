@@ -10,6 +10,8 @@ from database import get_db_connection, init_db
 from templates import LAYOUT_HTML, LOGIN_HTML, get_navbar
 from logic import generar_melate, procesar_analitica
 from google_sheets import exportar_a_sheets # Agrega esto al inicio de app.py
+from test_google import probar_conexion
+probar_conexion()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'multi-2026-safe-key')
@@ -255,6 +257,7 @@ def limpiar_errores():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
 
 
 
