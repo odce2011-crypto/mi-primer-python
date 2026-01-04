@@ -122,9 +122,10 @@ def resultados():
     
     rows = ""
     for f in favs:
-        # Mostramos la fecha formateada
         f_str = f['fecha'].strftime('%d/%m %I:%M %p')
-        rows += f"<tr><td>{f_str}</td><td>{f['serie_eq']}</td><td>{f['serie_cz']}</td></tr>"
+        # Añadimos una celda con el botón de borrar
+        btn_borrar = f'<td><a href="/borrar/{f["id"]}" class="text-danger" onclick="return confirm(\'¿Borrar este registro?\')"><i class="bi bi-trash"></i></a></td>'
+        rows += f"<tr><td>{f_str}</td><td>{f['serie_eq']}</td><td>{f['serie_cz']}</td>{btn_borrar}</tr>"
     
     content = f"""
     <div class="card p-4 shadow">
@@ -245,5 +246,6 @@ def limpiar_errores():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
 
 
