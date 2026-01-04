@@ -9,6 +9,7 @@ from psycopg2.extras import RealDictCursor
 from database import get_db_connection, init_db
 from templates import LAYOUT_HTML, LOGIN_HTML, get_navbar
 from logic import generar_melate, procesar_analitica
+from google_sheets import exportar_a_sheets # Agrega esto al inicio de app.py
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'multi-2026-safe-key')
@@ -89,28 +90,24 @@ def generar():
     return render_template_string(LAYOUT_HTML, navbar=get_navbar(), content=content)
 
 @app.route('/guardar', methods=['POST'])
-@app.route('/guardar', methods=['POST'])
 def guardar():
-    if not session.get('logged_in'): 
-        return redirect(url_for('login'))
+    if not session.get('logged_in'): return redirect(url_for('login'))
     
-    # 1. Obtenemos la hora actual de Chicago con zona horaria
     fecha_chicago = get_local_time()
+    eq = request.form.get('num_eq')
+    cz = request.form.get('num_cz')
+    user = session.get('user', 'desconocido')
     
-    # 2. Conectamos a la DB (esta conexión ya trae el SET TIME ZONE de database.py)
-    conn = get_db_connection()
-    cur = conn.cursor()
+    # 1. GUARDAR EN POSTGRES (Tu historial actual)
+    conn = get_db_connection(); cur = conn.cursor()
+    cur.execute('INSERT INTO favoritos (serie_eq, serie_cz, fecha) VALUES (%s, %s, %s)', 
+                (eq, cz, fecha_chicago))
+    conn.commit(); cur.close(); conn.close()
     
-    # 3. Insertamos enviando la fecha de Chicago directamente
-    # Al usar %s para la fecha, le pasamos el objeto datetime de Python ya localizado
-    cur.execute('''
-        INSERT INTO favoritos (serie_eq, serie_cz, fecha) 
-        VALUES (%s, %s, %s)
-    ''', (request.form.get('num_eq'), request.form.get('num_cz'), fecha_chicago))
-    
-    conn.commit()
-    cur.close()
-    conn.close()
+    # 2. ENVIAR A GOOGLE SHEETS (Nuevo)
+    # Formateamos la fila: Fecha | Usuario | Serie Eq | Serie Cz
+    fila = [fecha_chicago.strftime('%Y-%m-%d %I:%M %p'), user, eq, cz]
+    exportar_a_sheets(fila)
     
     return redirect(url_for('resultados'))
 @app.route('/resultados')
@@ -258,6 +255,7 @@ def limpiar_errores():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
 
 
 
